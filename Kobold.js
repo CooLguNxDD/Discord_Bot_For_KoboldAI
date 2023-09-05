@@ -72,7 +72,7 @@ let ExecuteCommand = async (interaction)=>{
 client.on(Events.InteractionCreate, interaction => {
 	if (!interaction.isChatInputCommand()) return;
     ExecuteCommand(interaction);
-	console.log(interaction);
+	// console.log(interaction);
 });
 
 let guild;
@@ -80,13 +80,14 @@ let BotName;
 
 //history counter
 let counter;
-
+let isGenerating;
 //get discord infomation
 client.on('ready', () => {
     console.log('The bot is online!');
+    isGenerating = false;
+    counter = 1;
 
     let bot_id = client.user.id;
-    counter = 1;
     let membersList;
     //server name
     guild = client.guilds.cache.get(process.env.DISCORD_SERVER_ID);
@@ -101,6 +102,55 @@ client.on('ready', () => {
     console.log("Bot name: ", displayNameList[0])
 });
 
+
+const startGeneration = async (message, apiUrl, args) => {
+    isGenerating = true;
+    await newclient.post(apiUrl, args, function (data, response){
+
+        console.log(response.statusCode)
+        if(response.statusCode == 200)
+            if(data.results[0].text){
+                message.reply(data.results[0].text);
+            }
+            isGenerating = false;
+        }
+    ).on('error', function (err) {
+        console.log("ERRROROROROROOR:", err);
+    });
+}
+    // config
+let GenerationSetting = (newPrompt, message) => {
+    let this_settings = {
+        prompt: newPrompt,
+        use_story:false,
+        use_memory:false,
+        use_authors_note:false,
+        use_world_info:false,
+        max_context_length: 2048,
+        max_length: 120,
+        rep_pen: 1.08,
+        rep_pen_range: 1024,
+        rep_pen_slope: 0.9,
+        temperature: 0.8,
+        tfs: 0.9,
+        top_a: 0,
+        top_k: 40,
+        top_p: 0.9,
+        typical: 1,
+        sampler_order: [6, 0, 1, 2, 3, 4, 5],
+        };
+    const apiUrl = process.env.KOBOLD_API_URL + 'v1/generate';
+    // console.log(this_settings);
+    var args = {
+        data: this_settings,
+        headers: { "Content-Type": "application/json" },
+    };
+
+    startGeneration(message, apiUrl, args);
+    
+}
+
+
 client.on('messageCreate', async (message) => {
     //ignore message from this bot
     if (message.author.bot) return;
@@ -111,10 +161,11 @@ client.on('messageCreate', async (message) => {
     if (message.content.startsWith('!')) return;
 
     //start tag
-    let conversationLog = "<START>\n";
+    let conversationLog = `<START>\n ${BotName}: Welcome back! i am ${BotName}\n`;
+
+    
 
     try {
-
         //next msg
         await message.channel.sendTyping();
 
@@ -122,6 +173,9 @@ client.on('messageCreate', async (message) => {
         let prevMessages = await message.channel.messages.fetch({ limit: counter });
         prevMessages.reverse();
         
+        if(counter < 50){
+            counter+=1;
+        }
         prevMessages.forEach((msg) => {
             if (msg.content.startsWith('!')) return;
             if (msg.author.id !== client.user.id && message.author.bot) return;
@@ -134,62 +188,34 @@ client.on('messageCreate', async (message) => {
             // if bot
             if (msg.author.id == client.user.id) {
                 conversationLog += BotName +": ";
-                conversationLog += msg.content +"\n";
+                conversationLog += msg.content +"\n ";
             }
             // if discord user
             else {
                 conversationLog += "You: "
-                conversationLog += msg.content+"\n";
+                conversationLog += msg.content+"\n ";
             }
         });
 
-        conversationLog = conversationLog.replace("~", "");
-        
-        conversationLog += BotName +": ";
-
-        const apiUrl = process.env.KOBOLD_API_URL + 'v1/generate';
+        conversationLog = conversationLog.replace(`~`, " ");
+        console.log(conversationLog);
+        console.log(counter);
+        conversationLog += BotName +":";
 
         let newPrompt = conversationLog;
-
-        // config
-        let this_settings = {
-            prompt: newPrompt,
-            use_story:false,
-            use_memory:false,
-            use_authors_note:false,
-            use_world_info:false,
-            max_context_length: 2048,
-            max_length: 200,
-            rep_pen: 1.05,
-            rep_pen_range: 1024,
-            rep_pen_slope: 0.9,
-            temperature: 1,
-            tfs: 0.9,
-            top_a: 0,
-            top_k: 40,
-            top_p: 0.9,
-            typical: 1,
-            sampler_order: [6, 0, 1, 2, 3, 4, 5],
-            };
-
-        // console.log(this_settings);
-        var args = {
-            data: this_settings,
-            headers: { "Content-Type": "application/json" },
-        };
-
-        await newclient.post(apiUrl, args, function (data, response){
-            // console.log(response);
-            // console.log(data)
-            if(response.statusCode == 200)
-                message.reply(data.results[0].text);
-
-                if(counter < 50){
-                    counter+=1;
-                }
+        if(!isGenerating){
+            GenerationSetting(newPrompt, message);
+            if(counter < 50){
+                counter+=1;
             }
-        )
-        
+        }
+        else{
+            message.reply("you are typing too fast, please slow down.");
+            if(counter < 50){
+                counter+=1;
+            }
+        }
+
     } catch (error) {
         console.log(`ERR: ${error}`);
     }
