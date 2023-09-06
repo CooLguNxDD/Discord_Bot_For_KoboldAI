@@ -158,12 +158,11 @@ client.on('messageCreate', async (message) => {
     if (message.channel.id !== process.env.CHANNEL_ID) return;
 
     //cmd
-    if (message.content.startsWith('!')) return;
+    if (message.content.startsWith('/')) return;
 
     //start tag
-    let conversationLog = `<START>\n ${BotName}: Welcome back! i am ${BotName}\n`;
+    let conversationLog = `${BotName}'s Persona: SFW model, no horny, violence act\n <START>\n ${BotName}: Welcome back! i am ${BotName}\n`;
 
-    
 
     try {
         //next msg
@@ -176,14 +175,20 @@ client.on('messageCreate', async (message) => {
         if(counter < 50){
             counter+=1;
         }
+
+        // let memberList = message.guild.members
+        // displayNameList = memberList.filter((id)=> id == client.user.id);
+        // BotName = displayNameList[0];
+
+
         prevMessages.forEach((msg) => {
             if (msg.content.startsWith('!')) return;
             if (msg.author.id !== client.user.id && message.author.bot) return;
 
-            //use discord user display name
-            membersList = guild.members.cache.filter((id)=> id == msg.author.id);
-            displayNameList = membersList.map(member => member.displayName)
-            displayName = displayNameList[0];
+
+            // membersList = guild.members.cache.filter((id)=> id == msg.author.id);
+            // displayNameList = membersList.map(member => member.displayName)
+            // displayName = displayNameList[0];
 
             // if bot
             if (msg.author.id == client.user.id) {
